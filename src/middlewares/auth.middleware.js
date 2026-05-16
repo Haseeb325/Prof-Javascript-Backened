@@ -1,7 +1,4 @@
-// ye middleware verify kre ga k user ha k ni ha based on tokens mtlb user login ha k ni ha 
-// this is  for logout k ye sb drama logout mtlb k us k andr logoutUser k ndr b ho skta tha lekin idr krne se ye reuseable  ha ho skta ye accessing krne k liay khin aur b zarorat par jaye 
-
-import { ApiError } from "../utils/ApiError.js";
+import { errorResponse } from "../utils/apiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import jwt from "jsonwebtoken"
 import { User } from "../models/user.model.js";
@@ -16,7 +13,7 @@ try {
     const token = req.cookies?.accessToken || req.header("Authorization")?.replace("Bearer" , "") // Bearer space converted into empty string
     console.log(token)
     if(!token){
-        throw new ApiError(401, "Unauthorized Request")
+        return errorResponse(res, "Unauthorized Request", 401)
     }
     
     // agar token ha
@@ -32,7 +29,7 @@ try {
     // Next Video Todo discuss about frontened
     
     
-        throw new ApiError(401, "Invalid Access Token")
+        return errorResponse(res, "Invalid Access Token", 401)
     }
     
     // Agar user ha he ha
@@ -41,8 +38,9 @@ try {
     next()
 } catch (error) {
     
-    throw new ApiError(401, error?.message || "Invalid Acces Token")
+    return errorResponse(res, error?.message || "Invalid Access Token", 401)
 }
 
 })
+
 

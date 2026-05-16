@@ -1,10 +1,11 @@
 
 //REAl
-import { ApiError } from "../utils/ApiError.js"
+import { successResponse, errorResponse } from "../utils/apiResponse.js"
 import { asyncHandler } from "../utils/asyncHandler.js"
 import { User } from "../models/user.model.js"
 import { uploadOnCloudinary } from "../utils/cloudinary.js"
-import { ApiResponse } from "../utils/ApiResponse.js"
+
+
 import jwt from "jsonwebtoken"
 import mongoose from "mongoose"
 
@@ -36,8 +37,12 @@ const generateAccessAndRefreshTokens = async (userId) => {
 
 
     } catch (error) {
-        throw new ApiError(500, "Something went wrong while enerating access and refresh token")
+        const err = new Error("Something went wrong while generating access and refresh token");
+        err.status = 500;
+        throw err;
     }
+
+
 }
 
 
@@ -75,12 +80,12 @@ const registerUser = asyncHandler(async (req, res) => {
     //  Advance method
 
     if (
-        //OPTIONAL CHAINING METHOD
-        [fullName, email, username, password].some((field) => // it returns true or false mtlb k some()functioncheck kre ga trim()mtlb removes whitespaces fro start and end of chracter  ?Qmark ye chain krta h k agr if any field null y undefined ha to some() true hog aur error ajaye ga 
-            field?.trim() === "") // agr field ha to trim kr do agr trim krne k baad bhi wo empty ha to true hoga agr 1 b true mtlb 1 b field khali ha to automatically true return hoga 
+        [fullName, email, username, password].some((field) => 
+            field?.trim() === "")
     ) {
-        throw new ApiError(400, "All fields are required")
+        return errorResponse(res, "All fields are required", 400)
     }
+
 
     // User.findOne({username})     ye dono b use ho skte
     // User.findOne({email})
@@ -89,8 +94,9 @@ const registerUser = asyncHandler(async (req, res) => {
         $or: [{ username }, { email }]
     })
     if (existedUser) {
-        throw new ApiError(409, "User with email or username already exist")
+        return errorResponse(res, "User with email or username already exist", 409)
     }
+
 
 
     // jb user ne text bhr dia lekin file upload na ki user ki galti
@@ -107,8 +113,9 @@ const registerUser = asyncHandler(async (req, res) => {
         coverImageLocalPath = req.files.coverImage[0].path
     }
     if (!avatarLocalPath) {
-        throw new ApiError(400, "Avatar files are required")
+        return errorResponse(res, "Avatar files are required", 400)
     }
+
 
 
     // idhr check kre ge cloudinary pe upload hui k ni agr na hui kisi b wja se for example internet issue se to ye error aye ga
@@ -116,8 +123,9 @@ const registerUser = asyncHandler(async (req, res) => {
     const avatar = await uploadOnCloudinary(avatarLocalPath)
     const coverImage = await uploadOnCloudinary(coverImageLocalPath)
     if (!avatar) {
-        throw new ApiError(400, "avatar files are required")
+        return errorResponse(res, "avatar files are required", 400)
     }
+
 
 
     // ab ham user create kre ge db ma entry hogi User se se jo k models se aye ga
@@ -143,13 +151,13 @@ const registerUser = asyncHandler(async (req, res) => {
     )
 
     if (!createdUser) {
-        throw new ApiError(500, "Something went wrong while registering user")
+        return errorResponse(res, "Something went wrong while registering user", 500)
     }
 
+
     // agr user bn gya to return kr de ge
-    return res.status(201).json(
-        new ApiResponse(200, createdUser, "User registered successfully")
-    )
+    return successResponse(res, "User registered successfully", createdUser, 201)
+
 
 
 
@@ -174,8 +182,9 @@ const loginUser = asyncHandler(async (req, res) => {
 
     // in cheezon k liay logic socha kro k kya krna chahte ho
     if (!(username || email)) {
-        throw new ApiError(400, "username or  emailis required")
+        return errorResponse(res, "username or email is required", 400)
     }
+
 
     // if(!username || !email)  ye b thk ha
     // {throw new ApiError(400 , "Username or email is required")
@@ -201,16 +210,18 @@ const loginUser = asyncHandler(async (req, res) => {
     // agr user Na Mile
 
     if (!user) {
-        throw new ApiError(400, "user does not exist")
+        return errorResponse(res, "user does not exist", 400)
     }
+
 
     // cpital {User} ye mongodb wala ha ye use hota mongodb queries k liay aur small {user} ye hamara bnaya hua jhan se check kre ge match kia k ni 
     //idr ham password check kre ge jo k this.password se mile ga bcrypt wala i think {password} jo ha ye user wala ha jo function ma pass hua hua lekin jo saved user ka password ha wo this.password se mile ga 
 
     const isPasswordValid = await user.isPasswordCorrect(password) // ye body wala nikala jo user ne enter kia
     if (!isPasswordValid) { 
-        throw new ApiError(401, " Invalid User Credentials Wrong password")
+        return errorResponse(res, "Invalid User Credentials", 401)
     }
+
 
     // if password thk h
     // access aur refresh token le lo dono mil gay user jo create hua us ki id ki base pe yhi to mang rha tha
@@ -231,19 +242,18 @@ const loginUser = asyncHandler(async (req, res) => {
         secure: true
     }
 
-    return res
-        .status(200) // key     // value
+    res
+        .status(200)
         .cookie("accessToken", accessToken, options)
-        .cookie("refreshToken", refreshToken, options)
-        .json(
-            new ApiResponse(200,
-                {
-                    user: loggedInUser, accessToken, refreshToken     // ye is liay behja k hoskta user apni localstorage ma save krna chahta ho
+        .cookie("refreshToken", refreshToken, options);
+    
+    return successResponse(res, "User Logged In successfully", {
+        user: loggedInUser,
+        accessToken,
+        refreshToken
+    }, 200)
 
-                },
-                "User Logged In seccessfully"
-            )
-        )
+
 
 
 })
@@ -274,12 +284,12 @@ const LogoutUser = asyncHandler(async (req, res) => {
         secure: true
     }
 
-    return res.status(200)
+    res.status(200)
         .clearCookie("accessToken", options)
-        .clearCookie("refreshToken", options)
-        .json(
-            new ApiResponse(200, {}, "User LoggedOut Successfully")
-        )
+        .clearCookie("refreshToken", options);
+        
+    return successResponse(res, "User LoggedOut Successfully", {}, 200)
+
 
 })
 
@@ -297,8 +307,9 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 
     // agr refresh token na mile
     if (!incomingRefreshToken) {
-        throw new ApiError(401, "Unauthorized request")
+        return errorResponse(res, "Unauthorized request", 401)
     }
+
 
     // agr mil gya ha to 
     // verify incoming
@@ -313,16 +324,18 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
         // ab is token ki base pe user find kro
         const user = await User.findById(decodedToken?._id)    // User mujhe find krna kon sa user find krna ha wo mere pass decoded token ma rakha hua ha us ma se _id  nikal lete hain
         if (!user) {
-            throw new ApiError(401, "Invalid refresh token")
+            return errorResponse(res, "Invalid refresh token", 401)
         }
+
         // ab agr user mil gya ha ku ki ham ne idhr const user =await User.findById(decodedToken?._id) find kia ha user ko 2 conditions ho skti hain ya to user na mile yo ham error show krwai ge agr is query se mil jay to phr next proceed kre ge
 
         // Ab hamare pass token 2 trah se aya ha incoming token jo k full token ha aur 1 decoded token decode token mtlb payload alag kr do aur baqi aur alag pehle ham ne 1 token save krwaya tha jb login kia wo refresh token wo complete tha encoded ab ham match kre ge  incoming token jo user hame bhej rha ha aur is token ko decode kr k decoded token jis se user find kia agr ye dono match kre ge agr match kr gya to mamla thk ha
 
         // agr match ho gya to kam agy brhe ga warna ye error ajay ga
         if (incomingRefreshToken !== user?.refreshToken) {
-            throw new ApiError(401, "Refresh token is expired")
+            return errorResponse(res, "Refresh token is expired", 401)
         }
+
 
         // agr match kr gya to conditio ki zrorat ni ha ham next kam krte hain
 
@@ -338,22 +351,14 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
         // ab upr 1 method bnaya tha jo k accesstoken and refreshtoken generate krta ha use use kre ge
         // ziada tr ham values ko ya method ko sirf 1 variable ma store krte hain lekin idhr hame 2 ki zrorat ha is liay 2 bnaye ge
         const { accessToken, newRefreshToken } = await generateAccessAndRefreshTokens(user._id) // generate ho chuka aur user mil chuka to pass kr do _id
-        return res
-            .status(200)
-            .cookies("accessToken", accessToken, options)
-            .cookies("refreshToken", newRefreshToken, options)
-            .json(
-                new ApiResponse(
-                    200,
-                    { accessToken, refreshToken: newRefreshToken },
-                    "Access token refreshed"
-                )
-            )
+        return successResponse(res, "Access token refreshed", { accessToken, refreshToken: newRefreshToken }, 200)
+
 
 
     } catch (error) {
-        throw new ApiError(401, error?.message || "invalid refresh token")
+        return errorResponse(res, error?.message || "invalid refresh token", 401)
     }
+
 
 
 
@@ -386,8 +391,9 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
 
     // ab check kr lo
     if (!isPasswordCorrect) {
-        throw new ApiError(401, "Invalid Old password")
+        return errorResponse(res, "Invalid Old password", 401)
     }
+
 
     // agr wrong hoga to upr error ajaye ga agr password match kr jata ha to agay chlte hain
 
@@ -398,11 +404,7 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
     await user.save({ validateBeforeSave: false }) // vlidate false ka mtlb jb password set ho k user save hoga to baqi ki validation run n kre gi
 
     // kam hogya upar tk ab bs 1 msg show krwa dete hain
-    return res
-        .status(200)
-        .json(
-            new ApiResponse(200, {}, "Password Changed successfully")
-        )
+    return successResponse(res, "Password Changed successfully", {}, 200)
 
 })
 
@@ -412,9 +414,7 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
 // agr user loggedIn ha to 2 mint ma current user get kr len ge
 const getCurrentUser = asyncHandler(async (req, res) => {
     // sidha return kr do
-    return res
-        .status(200)
-        .json(new ApiResponse(200, req.user, "Current user fetched successfully")) // hamari is request pe middleware run ho chuka ha aur user mil chuka
+    return successResponse(res, "Current user fetched successfully", req.user, 200)
 })
 
 const updateAccountDetails = asyncHandler(async (req, res) => {
@@ -424,12 +424,12 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
     //     throw new ApiError(400, "All fields are required")
     // }
     if (
-        //OPTIONAL CHAINING METHOD
-        [fullName, email,].some((field) => // it returns true or false mtlb k some()functioncheck kre ga trim()mtlb removes whitespaces fro start and end of chracter  ?Qmark ye chain krta h k agr if any field null y undefined ha to some() true hog aur error ajaye ga 
-            field?.trim() === "") // agr field ha to trim kr do agr trim krne k baad bhi wo empty ha to true hoga agr 1 b true mtlb 1 b field khali ha to automatically true return hoga 
+        [fullName, email].some((field) => 
+            field?.trim() === "")
     ) {
-        throw new ApiError(400, "All fields are required")
+        return errorResponse(res, "All fields are required", 400)
     }
+
 
     // user find kro
 
@@ -449,11 +449,7 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
 
     // ab return kr do
 
-    return res
-        .status(200)
-        .json(
-            new ApiResponse(200, { user }, "Account Details updated successfully")
-        )
+    return successResponse(res, "Account Details updated successfully", { user }, 200)
 
 })
 
@@ -476,8 +472,9 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
     const avatarLocalPath = req.file?.path     // acha ye ham aese sidha b upload kr skte db ma cloudinary k begair to isi ko as it is save krwa skte db ma
 
     if (!avatarLocalPath) {
-        throw new ApiError(400, "Avatar file is missing")
+        return errorResponse(res, "Avatar file is missing", 400)
     }
+
 
     //Now upload kr do cloudinary pe
 
@@ -486,9 +483,9 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
 
     // agar upload hogya ha lekin url ni mila 
     if (!avatar.url) {
-        throw new ApiError(400, "Error while uploading on avatar")
-
+        return errorResponse(res, "Error while uploading on avatar", 400)
     }
+
 
     // ab update kr do
     const user = await User.findByIdAndUpdate(
@@ -501,11 +498,7 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
         { new: true }
     ).select("-password")   // password hta do bhai
 
-    return res
-        .status(200)
-        .json(
-            new ApiResponse(200, { user }, "Avatar Image updated successfully")
-        )
+    return successResponse(res, "Avatar Image updated successfully", { user }, 200)
 
 })
 
@@ -521,8 +514,9 @@ const updateUsercoverImage = asyncHandler(async (req, res) => {
     const coverImageLocalPath = req.file?.path     // acha ye ham aese sidha b upload kr skte db ma cloudinary k begair to isi ko as it is save krwa skte db ma
 
     if (!coverImageLocalPath) {
-        throw new ApiError(400, "coverImage file is missing")
+        return errorResponse(res, "coverImage file is missing", 400)
     }
+
 
     //Now upload kr do cloudinary pe
 
@@ -531,9 +525,9 @@ const updateUsercoverImage = asyncHandler(async (req, res) => {
 
     // agar upload hogya ha lekin url ni mila 
     if (!coverImage.url) {
-        throw new ApiError(400, "Error while uploading on image")
-
+        return errorResponse(res, "Error while uploading on image", 400)
     }
+
 
     // ab update kr do
     const user = await User.findByIdAndUpdate(      // const user ye ham ne refrece ma le lia ye response ma bhejne k liay agr response ni bhejna hota to variable ma store krne ki zarorat ni
@@ -546,13 +540,10 @@ const updateUsercoverImage = asyncHandler(async (req, res) => {
         { new: true }
     ).select("-password")   // password hta do bhai
 
-    return res
-        .status(200)
-        .json(
-            new ApiResponse(200, { user }, "Cover Image updated successfully")
-        )
+    return successResponse(res, "Cover Image updated successfully", { user }, 200)
 
 })
+
 
 
 
@@ -620,9 +611,10 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
     const { username } = req.params
     // ab ham ne koshish k user ko lene ki params se lene ki ho sakta ha empty ho to ab condition lagao
 
-    if (!username?.trim()) {   // agr nhi ha to error agr ha to trim 
-        throw new ApiError(400, "username is missing")
+    if (!username?.trim()) {
+        return errorResponse(res, "username is missing", 400)
     }
+
     // ab yhan tk ma agya hun to expect krta hun k username hoga
     // ab username se user find krte
 
@@ -719,16 +711,14 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
 
     // aagr channel he nhi ha mtlb array jo milta ha wo ha he ni to ye error de do
     if (!channel?.length) {
-        throw new ApiError(404, "channel does not exist")
+        return errorResponse(res, "channel does not exist", 404)
     }
+
 
     // Aur agar length ha to ham array b return kr skte hain pr array ki waja se frontened wala roye ga  wo roye na to ham response return kr dete hain achi trah se
 
-    return res
-        .status(200)
-        .json(
-            new ApiResponse(200, channel[0], "User channel fetched successfully")  // chsnnel[0] ka mtlb ha k first object agya us ma se data pick pick kr k laga de ga frontened wala
-        )
+    return successResponse(res, "User channel fetched successfully", channel[0], 200)
+
 })
 
 const getWatchHistory = asyncHandler(async (req, res) => {
@@ -778,13 +768,8 @@ const getWatchHistory = asyncHandler(async (req, res) => {
         }
     ])
 
-    return res
-        .status(200)
-        .json(
-            new ApiResponse(200, user[0].watchHistory,
-                "watch history fetched successfully"
-            )
-        )
+    return successResponse(res, "watch history fetched successfully", user[0].watchHistory, 200)
+
 
 })
 

@@ -250,3 +250,12 @@ router.route("/register").post(
             // Here you can handle the responses from Cloudinary as needed
             console.log("Avatar upload response:", avatarUploadResponse);
             console.log("Cover image upload response
+
+
+
+
+
+
+new cluster password TbxJNJFqWfCdIXj7
+username haseebbaig6594325_db_user
+mongodb+srv://haseebbaig6594325_db_user:TbxJNJFqWfCdIXj7@cluster0.vyvy0pj.mongodb.net/?appName=Cluster0

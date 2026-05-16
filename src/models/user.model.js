@@ -47,8 +47,25 @@ refreshToken:{
 }
 
 
-    },{timestamps:true}
+    }, {
+        timestamps: true,
+        toJSON: {
+            transform: function (doc, ret) {
+                ret.id = ret._id;
+                delete ret._id;
+                delete ret.__v;
+            }
+        },
+        toObject: {
+            transform: function (doc, ret) {
+                ret.id = ret._id;
+                delete ret._id;
+                delete ret.__v;
+            }
+        }
+    }
 )
+
 
 userSchema.pre ('save', async function (next){     // ye  hook ha jo password save hone se just pehle kuch krwa lo is trah aur b bre hooks hote hain
     // if(this.isModified("pasword")){ }

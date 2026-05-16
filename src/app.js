@@ -32,23 +32,36 @@ app.use(cookieParser())
 
 
 
-// routes imports
 import userRouter from "./routes/user.routes.js"
-
-
+import healthcheckRouter from "./routes/healthcheck.routes.js"
+import tweetRouter from "./routes/tweet.routes.js"
+import subscriptionRouter from "./routes/subscription.routes.js"
+import videoRouter from "./routes/video.routes.js"
+import commentRouter from "./routes/comment.routes.js"
+import likeRouter from "./routes/like.routes.js"
+import playlistRouter from "./routes/playlist.routes.js"
+import dashboardRouter from "./routes/dashboard.routes.js"
 
 // routes declaration
+app.use("/api/v1/healthcheck", healthcheckRouter)
+app.use("/api/v1/users", userRouter)
+app.use("/api/v1/tweets", tweetRouter)
+app.use("/api/v1/subscriptions", subscriptionRouter)
+app.use("/api/v1/videos", videoRouter)
+app.use("/api/v1/comments", commentRouter)
+app.use("/api/v1/likes", likeRouter)
+app.use("/api/v1/playlist", playlistRouter)
+app.use("/api/v1/dashboard", dashboardRouter)
 
-  // agar routes aur middleware akathe likhne hain to app.get() use krna ha agr routes aur middlewares separate likhe hon to ohr app.use()  istemal kre ge idhr ham app.use() istemal kre ge ku ki routes aur middlewares separate separate likkhe hain
-// app.use("/users",userRouter)  //ye kuch is trah kam kre ga k jb koi b / users hit kre ga to ye jay ga /register pe  
-//     aur url kuch is trah bne ga  http://localhost:8000/users/register  its a best practice
+// Global Error Handler
+import { errorResponse } from "./utils/apiResponse.js";
+app.use((err, req, res, next) => {
+    return errorResponse(res, err.message || "Internal Server Error", err.status || 500);
+});
+
+export { app };
 
 
-app.use("/api/v1/users",userRouter)  //agar export defaut ho rha ho to name jo mrzi rkh lo//http://localhost:8000/api/v1/users/register user.routes ma b dekhen
-// app.get se ham routes aur controllers idhr akathe he likte hain 
-// app.use middleware routes ya configration k liay use hota ha
-
-export { app }
 
 
 // CHATGPT
