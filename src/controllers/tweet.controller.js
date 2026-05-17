@@ -23,6 +23,12 @@ const createTweet = asyncHandler(async (req, res) => {
     return successResponse(res, "Tweet created successfully", tweet, 201);
 });
 
+const getAllTweets = asyncHandler(async (req, res) => {
+    const tweets = await Tweet.find().sort("-createdAt");
+
+    return successResponse(res, "All tweets fetched successfully", tweets);
+});
+
 const getUserTweets = asyncHandler(async (req, res) => {
     const { userId } = req.params;
 
@@ -90,4 +96,4 @@ const deleteTweet = asyncHandler(async (req, res) => {
     return successResponse(res, "Tweet deleted successfully", {});
 });
 
-export { createTweet, getUserTweets, updateTweet, deleteTweet };
+export { createTweet, getUserTweets, updateTweet, deleteTweet, getAllTweets };
